@@ -107,6 +107,7 @@ public class SubTravelogue extends BaseTimeEntity {
   }
 
   public void addPhotos(List<TravelPhoto> travelPhotos) {
+    photos.clear();
     photos.addAll(travelPhotos);
   }
 }

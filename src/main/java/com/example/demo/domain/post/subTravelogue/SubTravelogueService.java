@@ -7,6 +7,7 @@ import com.example.demo.domain.post.subTravelogue.entity.SubTravelogue;
 import com.example.demo.domain.post.subTravelogue.repository.SubTravelogueRepository;
 import com.example.demo.domain.post.travelogue.entity.Travelogue;
 import com.example.demo.domain.post.travelogue.service.TravelogueService;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,9 +40,10 @@ public class SubTravelogueService {
     if (subTravelogue.getPhotos().isEmpty()) {
       return;
     }
-    subTravelogue.addPhotos(subTravelogueCreateReq.travelPhotoCreateReqs()
-        .stream()
-        .map(TravelPhotoCreateReq::toEntity)
-        .toList());
+    subTravelogue.getPhotos()
+        .addAll(subTravelogueCreateReq.travelPhotoCreateReqs()
+            .stream()
+            .map(TravelPhotoCreateReq::toEntity)
+            .toList());
   }
 }
