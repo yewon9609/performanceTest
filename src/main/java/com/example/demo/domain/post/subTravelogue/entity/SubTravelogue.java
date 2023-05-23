@@ -39,7 +39,7 @@ public class SubTravelogue extends BaseTimeEntity {
   private int day;
 
   @ElementCollection
-  @CollectionTable(name = "address", joinColumns = @JoinColumn(name = "sub_travelogue_id"))
+  @CollectionTable(name = "travel_address", joinColumns = @JoinColumn(name = "sub_travelogue_id"))
   private List<Address> addresses = new ArrayList<>();
 
   @ElementCollection

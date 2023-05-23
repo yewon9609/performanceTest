@@ -10,9 +10,11 @@ import com.example.demo.domain.post.travelogue.entity.Travelogue;
 import com.example.demo.domain.post.travelogue.repository.querydsl.TravelogueRepositoryQuerydsl;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
 import org.springframework.stereotype.Repository;
 
@@ -27,99 +29,67 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
     this.jpaQueryFactory = jpaQueryFactory;
   }
 
+  private static final int SPARE_PAGE = 1;
+
   @Override
-  public List<TravelogueSimpleRes> search(String keyword) {
-    List<List<Travelogue>> searchRequirements = List.of(hasTitle(keyword), hasCountry(keyword),
-        hasSubTitle(keyword), hasSubContent(keyword), hasSubSpot(keyword));
-    List<Travelogue> searchResults = new ArrayList<>();
+  public Slice<TravelogueSimpleRes> search(String keyword, Pageable pageable) {
 
-    for (List<Travelogue> requirement : searchRequirements) {
-      searchResults = getTravelogues(requirement, searchResults);
-    }
-
-    return searchResults.stream()
+    List<TravelogueSimpleRes> travelogueSimpleRes = jpaQueryFactory.select(travelogue)
+        .from(travelogue)
+        .join(subTravelogue)
+        .on(subTravelogue.travelogue.id.eq(travelogue.id))
+        .where(
+            hasTitle(keyword)
+                .or(hasCountry(keyword))
+                .or(hasSubContent(keyword))
+                .or(hasSubSpot(keyword))
+                .or(hasSubTitle(keyword))
+        )
+        .offset(pageable.getOffset())
+        .limit(pageable.getPageSize() + SPARE_PAGE)
+        .orderBy(travelogue.id.desc())
+        .groupBy(travelogue.id)
+        .fetch()
+        .stream()
         .map(TravelogueSimpleRes::toDto)
-        .toList();
+        .collect(Collectors.toList());
+
+
+    return checkLastPage(pageable, travelogueSimpleRes);
   }
 
-  private List<Travelogue> getTravelogues(List<Travelogue> foundList, List<Travelogue> result) {
-    return Stream.concat(foundList.stream(), result.stream())
-        .distinct()
-        .toList();
+  private BooleanExpression hasTitle(String keyword) {
+    return hasText(keyword) ? travelogue.title.containsIgnoreCase(keyword) : null;
   }
 
-  private List<Travelogue> hasTitle(String keyword) {
-    return jpaQueryFactory
-        .select(travelogue)
-        .from(travelogue)
-        .where(titleContains(keyword))
-        .fetch();
+  private BooleanExpression hasCountry(String keyword) {
+    return hasText(keyword) ? travelogue.country.name.containsIgnoreCase(keyword) : null;
   }
 
-  private List<Travelogue> hasCountry(String keyword) {
-    return jpaQueryFactory
-        .select(travelogue)
-        .from(travelogue)
-        .where(countryContains(keyword))
-        .fetch();
+  private BooleanExpression hasSubContent(String keyword) {
+    return hasText(keyword) ? subTravelogue.content.containsIgnoreCase(keyword) : null;
   }
 
-  private List<Travelogue> hasSubContent(String keyword) {
-    return jpaQueryFactory
-        .select(travelogue)
-        .from(travelogue)
-        .leftJoin(subTravelogue)
-        .on(subTravelogue.travelogue.id.eq(travelogue.id))
-        .where(
-            contentContains(keyword)
-        )
-        .fetch();
+  private BooleanExpression hasSubSpot(String keyword) {
+    return hasText(keyword) ? subTravelogue.addresses.contains(new Address(keyword)) : null;
   }
 
-  private List<Travelogue> hasSubSpot(String keyword) {
-    return jpaQueryFactory
-        .select(travelogue)
-        .from(travelogue)
-        .leftJoin(subTravelogue)
-        .on(subTravelogue.travelogue.id.eq(travelogue.id))
-        .where(
-            spotContains(keyword)
-        )
-        .fetch();
-  }
-
-  private List<Travelogue> hasSubTitle(String keyword) {
-    return jpaQueryFactory
-        .select(travelogue)
-        .from(travelogue)
-        .leftJoin(subTravelogue)
-        .on(subTravelogue.travelogue.id.eq(travelogue.id))
-        .where(
-            subTitleContains(keyword)
-        )
-        .fetch();
-  }
-
-  private BooleanExpression titleContains(String keyword) {
-    return hasText(keyword) ? travelogue.title.contains(keyword) : null;
-  }
-
-  private BooleanExpression subTitleContains(String keyword) {
+  private BooleanExpression hasSubTitle(String keyword) {
     return hasText(keyword) ? subTravelogue.title.contains(keyword) : null;
   }
 
-  private BooleanExpression countryContains(String keyword) {
-    return hasText(keyword) ? travelogue.country.name.contains(keyword) : null;
-  }
 
-  private BooleanExpression contentContains(String keyword) {
-    return hasText(keyword) ? subTravelogue.content.contains(keyword) : null;
-  }
+  private Slice<TravelogueSimpleRes> checkLastPage(Pageable pageable,
+      List<TravelogueSimpleRes> results) {
 
-  private BooleanExpression spotContains(String keyword) {
-    return hasText(keyword) ?
-        subTravelogue.addresses.contains(new Address(keyword)) : null;
-  }
+    boolean hasNext = false;
 
+    if (results.size() > pageable.getPageSize()) {
+      hasNext = true;
+      results.remove(pageable.getPageSize());
+    }
+
+    return new SliceImpl<>(results, pageable, hasNext);
+  }
 
 }

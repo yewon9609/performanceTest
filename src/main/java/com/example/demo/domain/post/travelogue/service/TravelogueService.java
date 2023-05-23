@@ -42,19 +42,8 @@ public class TravelogueService {
   }
 
   public Slice<TravelogueSimpleRes> search(String keyword, Pageable pageable) {
-    List<TravelogueSimpleRes> searchResult = travelogueRepository.search(keyword);
-    boolean hasNext = hasNext(searchResult, pageable);
-    return new SliceImpl<>(searchResult, pageable, hasNext);
-
+    return travelogueRepository.search(keyword, pageable);
   }
 
-  private boolean hasNext(List<TravelogueSimpleRes> results, Pageable pageable) {
-    boolean hasNext = false;
-    if (results.size() > pageable.getPageSize()) {
-      hasNext = true;
-      results.remove(pageable.getPageSize());
-    }
-    return hasNext;
-  }
 
 }
