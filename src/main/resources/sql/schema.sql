@@ -1,0 +1,59 @@
+
+
+--   drop table if exists `travel_address`;
+--   drop table if exists travel_photo;
+--   drop table if exists transportation;
+--   drop table if exists sub_travelogue;
+--   drop table if exists travelogue;
+--
+--     create table travelogue (
+--        id bigint not null auto_increment,
+--         create_date datetime(6),
+--         etc bigint,
+--         lodge bigint,
+--         total bigint not null,
+--         transportation bigint,
+--         country_name varchar(255) not null,
+--         end_date date not null,
+--         `start_date` date not null,
+--         thumbnail tinytext,
+--         title varchar(255) not null,
+--         primary key (id)
+--     )
+--
+--
+--    create table sub_travelogue (
+--        id bigint not null auto_increment,
+--         create_date datetime(6),
+--         content LONGTEXT not null,
+--         day_seq integer not null,
+--         title varchar(50) not null,
+--         travelogue_id bigint,
+--         primary key (id),
+--         foreign key (travelogue_id)
+--         references travelogue (id)
+--     )
+--
+--   create table address (
+--        sub_travelogue_id bigint not null,
+--         region varchar(255) not null,
+--      	  foreign key (sub_travelogue_id)
+--        references sub_travelogue (id)
+--     )
+--
+--   create table transportation (
+--        sub_travelogue_id bigint not null,
+--         transportation_set varchar(255) not null,
+--         primary key (sub_travelogue_id, transportation_set),
+--   foreign key (sub_travelogue_id)
+--        references sub_travelogue (id)
+--     )
+--
+--     create table travel_photo (
+--        id bigint not null auto_increment,
+--         `url` varchar(255) not null,
+--         sub_travelogue_id bigint,
+--         primary key (id),
+--    foreign key (sub_travelogue_id)
+--        references sub_travelogue (id)
+--     )

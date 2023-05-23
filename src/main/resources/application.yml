@@ -4,8 +4,6 @@ spring:
       enabled: true
 
   datasource:
-#    url: jdbc:h2:mem:travel-testDB
-#    driver-class-name: org.h2.Driver
     url: jdbc:mysql://localhost:13306/travelzip-test
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
@@ -22,3 +20,5 @@ logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.type: trace
+
+
