@@ -20,8 +20,10 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
+@Transactional
 public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implements
     TravelogueRepositoryQuerydsl {
 
