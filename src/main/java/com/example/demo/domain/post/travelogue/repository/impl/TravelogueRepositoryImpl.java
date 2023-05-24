@@ -26,7 +26,6 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
     TravelogueRepositoryQuerydsl {
 
   private static final int SPARE_PAGE = 1;
-  private static final int SPARE_DAY = 1;
 
   private final JPAQueryFactory jpaQueryFactory;
 
@@ -57,7 +56,7 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
         )
         .from(travelogue)
         .where(travelogue.id.in(travelogueIds))
-        .orderBy(travelogue.createDate.desc())
+        .orderBy(travelogue.id.desc())
         .fetch()
         .stream()
         .map(TravelogueSimpleRes::toDto)
@@ -75,12 +74,26 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
         .where(
             travelogue.title.contains(keyword)
                 .or(countryContains(keyword))
-                .or(subTitleContains(keyword))
+                .or(subTravelogue.id.in(getSubTravelogueIds(keyword, pageable)))
+        )
+        .groupBy(travelogue.id)
+        .orderBy(travelogue.id.desc())
+        .limit(pageable.getPageSize() + SPARE_PAGE)
+        .offset(pageable.getOffset())
+        .fetch();
+  }
+
+  private List<Long> getSubTravelogueIds(String keyword, Pageable pageable) {
+    return jpaQueryFactory
+        .select(subTravelogue.id)
+        .from(subTravelogue)
+        .where(
+            subTravelogue.title.contains(keyword)
                 .or(contentContains(keyword))
                 .or(spotContains(keyword))
         )
-        .distinct()
-        .orderBy(travelogue.id.desc())
+        .groupBy(subTravelogue.id)
+        .orderBy(subTravelogue.id.desc())
         .limit(pageable.getPageSize() + SPARE_PAGE)
         .offset(pageable.getOffset())
         .fetch();
@@ -123,3 +136,4 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
   }
 
 }
+
