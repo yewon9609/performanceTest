@@ -62,20 +62,18 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
         .where(travelogue.id.in(travelogueIds))
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize() + SPARE_PAGE)
-        .orderBy(travelogue.createDate.desc())
+        .orderBy(travelogue.id.desc())
         .groupBy(travelogue.id)
         .fetch();
 
-    List<TravelogueSimple> results = new ArrayList<>();
-    results.addAll(travelogueSimpleList);
+    List<TravelogueSimple> results = new ArrayList<>(travelogueSimpleList);
 
     return checkLastPage(pageable, results);
   }
 
   private List<Long> getTravelogueIds(String keyword, List<Long> subTravelogueIds) {
     return Stream.concat(getTravelogueIds_containsSubTravelogues(subTravelogueIds).stream(),
-            Stream.concat(getTravelogueIds_searchCountryName(keyword).stream(),
-                getTravelogueIds_containsTitleName(keyword).stream()))
+            getTravelogueIds_contains(keyword).stream())
         .distinct()
         .toList();
   }
@@ -93,55 +91,33 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
         .fetch();
   }
 
-  private List<Long> getTravelogueIds_containsTitleName(String keyword) {
+  private List<Long> getTravelogueIds_contains(String keyword) {
     return jpaQueryFactory
         .select(travelogue.id)
         .from(travelogue)
         .where(
             titleContains(keyword)
+                .or(countryContains(keyword))
         )
-        .fetch();
-  }
-
-  private List<Long> getTravelogueIds_searchCountryName(
-      String keyword
-  ) {
-    return jpaQueryFactory
-        .select(travelogue.id)
-        .from(travelogue)
-        .where(
-            countryContains(keyword)
-        )
+        .distinct()
+        .orderBy(travelogue.id.desc())
         .fetch();
   }
 
 
   private List<Long> getSubTravelogueIds(String keyword) {
-    return Stream.concat(getSubTravelogueIds_containsContent(keyword).stream(),
-            getSubTravelogueIds_containsSpot(keyword).stream())
+    return jpaQueryFactory
+        .select(subTravelogue.id)
+        .from(subTravelogue)
+        .leftJoin(subTravelogue.addresses, address)
+        .on(subTravelogue.addresses.contains(address))
+        .where(
+            subTitleContains(keyword)
+                .or(contentContains(keyword))
+                .or(spotContains(keyword))
+        )
         .distinct()
-        .toList();
-  }
-
-  private List<Long> getSubTravelogueIds_containsContent(String keyword) {
-    return jpaQueryFactory
-        .select(subTravelogue.id)
-        .from(subTravelogue)
-        .innerJoin(subTravelogue.addresses, address)
-        .where(
-            contentContains(keyword)
-        )
-        .fetch();
-  }
-
-  private List<Long> getSubTravelogueIds_containsSpot(String keyword) {
-    return jpaQueryFactory
-        .select(subTravelogue.id)
-        .from(subTravelogue)
-        .innerJoin(subTravelogue.addresses, address)
-        .where(
-            spotContains(keyword)
-        )
+        .orderBy(subTravelogue.id.desc())
         .fetch();
   }
 
@@ -166,7 +142,6 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
     return hasText(keyword) ?
         subTravelogue.addresses.contains(new Address(keyword)) : null;
   }
-
 
   private Slice<TravelogueSimpleRes> checkLastPage(Pageable pageable,
       List<TravelogueSimple> results) {
