@@ -15,7 +15,6 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -58,7 +57,7 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
         )
         .from(travelogue)
         .where(travelogue.id.in(travelogueIds))
-        .orderBy(travelogue.id.desc())
+        .orderBy(travelogue.createDate.desc())
         .fetch()
         .stream()
         .map(TravelogueSimpleRes::toDto)
