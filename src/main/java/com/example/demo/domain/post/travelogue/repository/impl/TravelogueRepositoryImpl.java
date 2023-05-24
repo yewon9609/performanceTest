@@ -36,7 +36,16 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
   @Override
   public Slice<TravelogueSimpleRes> search(String keyword, Pageable pageable) {
 
-    List<TravelogueSimpleRes> travelogueSimpleRes = jpaQueryFactory.select(travelogue)
+    List<TravelogueSimpleRes> travelogueSimpleRes = jpaQueryFactory.select(
+        Projections.constructor(
+            TravelogueSimple.class,
+            travelogue.id,
+            travelogue.title,
+            travelogue.period,
+            travelogue.cost.total,
+            travelogue.country.name,
+            travelogue.thumbnail
+        ))
         .from(travelogue)
         .join(subTravelogue)
         .on(subTravelogue.travelogue.id.eq(travelogue.id))
@@ -47,7 +56,7 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
                 .or(hasSubSpot(keyword))
                 .or(hasSubTitle(keyword))
         )
-        .orderBy(travelogue.id.desc())
+        .orderBy(travelogue.createDate.desc())
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize() + SPARE_PAGE)
         .fetch()
