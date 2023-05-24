@@ -39,7 +39,7 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
         .join(subTravelogue)
         .on(subTravelogue.travelogue.id.eq(travelogue.id))
         .where(
-            hasTitle(keyword)
+            travelogue.title.containsIgnoreCase(keyword)
                 .or(hasCountry(keyword))
                 .or(hasSubContent(keyword))
                 .or(hasSubSpot(keyword))
@@ -47,8 +47,6 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
         )
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize() + SPARE_PAGE)
-        .orderBy(travelogue.id.desc())
-        .groupBy(travelogue.id)
         .fetch()
         .stream()
         .map(TravelogueSimpleRes::toDto)
