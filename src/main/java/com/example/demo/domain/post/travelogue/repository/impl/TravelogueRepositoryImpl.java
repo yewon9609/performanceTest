@@ -15,6 +15,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -43,7 +44,7 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
       return new SliceImpl<>(Collections.emptyList());
     }
 
-    List<TravelogueSimple> travelogueSimpleList = jpaQueryFactory
+    List<TravelogueSimpleRes> results = jpaQueryFactory
         .select(
             Projections.constructor(
                 TravelogueSimple.class,
@@ -58,10 +59,10 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
         .from(travelogue)
         .where(travelogue.id.in(travelogueIds))
         .orderBy(travelogue.id.desc())
-        .groupBy(travelogue.id)
-        .fetch();
-
-    List<TravelogueSimple> results = new ArrayList<>(travelogueSimpleList);
+        .fetch()
+        .stream()
+        .map(TravelogueSimpleRes::toDto)
+        .toList();
 
     return checkLastPage(pageable, results);
   }
@@ -108,18 +109,18 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
   }
 
   private Slice<TravelogueSimpleRes> checkLastPage(Pageable pageable,
-      List<TravelogueSimple> results) {
+      List<TravelogueSimpleRes> results) {
+
+    List<TravelogueSimpleRes> inputResults = new ArrayList<>(results);
 
     boolean hasNext = false;
 
     if (results.size() > pageable.getPageSize()) {
       hasNext = true;
-      results.remove(pageable.getPageSize());
+      inputResults.remove(pageable.getPageSize());
     }
 
-    return new SliceImpl<>(results.stream()
-        .map(TravelogueSimpleRes::toDto)
-        .toList(), pageable, hasNext);
+    return new SliceImpl<>(inputResults, pageable, hasNext);
   }
 
 }
