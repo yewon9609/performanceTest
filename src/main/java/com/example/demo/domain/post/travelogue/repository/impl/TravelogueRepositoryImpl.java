@@ -1,6 +1,5 @@
 package com.example.demo.domain.post.travelogue.repository.impl;
 
-import static com.example.demo.domain.post.subTravelogue.entity.QAddress.address;
 import static com.example.demo.domain.post.subTravelogue.entity.QSubTravelogue.subTravelogue;
 import static com.example.demo.domain.post.travelogue.entity.QTravelogue.travelogue;
 import static org.springframework.util.StringUtils.hasText;
@@ -16,7 +15,6 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Stream;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -39,8 +37,7 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
 
   @Override
   public Slice<TravelogueSimpleRes> search(String keyword, Pageable pageable) {
-    List<Long> subTravelogueIds = getSubTravelogueIds(keyword);
-    List<Long> travelogueIds = getTravelogueIds(keyword, subTravelogueIds);
+    List<Long> travelogueIds = getTravelogueIds_contains(keyword, pageable);
 
     if (travelogueIds.isEmpty()) {
       return new SliceImpl<>(Collections.emptyList());
@@ -60,8 +57,6 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
         )
         .from(travelogue)
         .where(travelogue.id.in(travelogueIds))
-        .offset(pageable.getOffset())
-        .limit(pageable.getPageSize() + SPARE_PAGE)
         .orderBy(travelogue.id.desc())
         .groupBy(travelogue.id)
         .fetch();
@@ -71,56 +66,25 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
     return checkLastPage(pageable, results);
   }
 
-  private List<Long> getTravelogueIds(String keyword, List<Long> subTravelogueIds) {
-    return Stream.concat(getTravelogueIds_containsSubTravelogues(subTravelogueIds).stream(),
-            getTravelogueIds_contains(keyword).stream())
-        .distinct()
-        .toList();
-  }
-
-  private List<Long> getTravelogueIds_containsSubTravelogues(
-      List<Long> subTravelogueIds
-  ) {
+  private List<Long> getTravelogueIds_contains(String keyword, Pageable pageable) {
     return jpaQueryFactory
         .select(travelogue.id)
         .from(travelogue)
-        .leftJoin(travelogue.subTravelogues, subTravelogue)
+        .leftJoin(subTravelogue)
+        .on(travelogue.subTravelogues.contains(subTravelogue))
         .where(
-            subTravelogue.id.in(subTravelogueIds)
-        )
-        .fetch();
-  }
-
-  private List<Long> getTravelogueIds_contains(String keyword) {
-    return jpaQueryFactory
-        .select(travelogue.id)
-        .from(travelogue)
-        .where(
-            titleContains(keyword)
+            travelogue.title.contains(keyword)
                 .or(countryContains(keyword))
-        )
-        .distinct()
-        .orderBy(travelogue.id.desc())
-        .fetch();
-  }
-
-
-  private List<Long> getSubTravelogueIds(String keyword) {
-    return jpaQueryFactory
-        .select(subTravelogue.id)
-        .from(subTravelogue)
-        .leftJoin(subTravelogue.addresses, address)
-        .on(subTravelogue.addresses.contains(address))
-        .where(
-            subTitleContains(keyword)
+                .or(subTitleContains(keyword))
                 .or(contentContains(keyword))
                 .or(spotContains(keyword))
         )
         .distinct()
-        .orderBy(subTravelogue.id.desc())
+        .orderBy(travelogue.id.desc())
+        .limit(pageable.getPageSize() + SPARE_PAGE)
+        .offset(pageable.getOffset())
         .fetch();
   }
-
 
   private BooleanExpression titleContains(String keyword) {
     return hasText(keyword) ? travelogue.title.contains(keyword) : null;
