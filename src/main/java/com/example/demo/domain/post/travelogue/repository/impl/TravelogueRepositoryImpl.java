@@ -5,13 +5,15 @@ import static com.example.demo.domain.post.travelogue.entity.QTravelogue.travelo
 import static org.springframework.util.StringUtils.hasText;
 
 import com.example.demo.domain.post.subTravelogue.entity.Address;
+import com.example.demo.domain.post.travelogue.dto.TravelogueSimple;
 import com.example.demo.domain.post.travelogue.dto.TravelogueSimpleRes;
 import com.example.demo.domain.post.travelogue.entity.Travelogue;
 import com.example.demo.domain.post.travelogue.repository.querydsl.TravelogueRepositoryQuerydsl;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -45,13 +47,13 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
                 .or(hasSubSpot(keyword))
                 .or(hasSubTitle(keyword))
         )
+        .orderBy(travelogue.id.desc())
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize() + SPARE_PAGE)
         .fetch()
         .stream()
         .map(TravelogueSimpleRes::toDto)
-        .collect(Collectors.toList());
-
+        .toList();
 
     return checkLastPage(pageable, travelogueSimpleRes);
   }
@@ -80,14 +82,16 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
   private Slice<TravelogueSimpleRes> checkLastPage(Pageable pageable,
       List<TravelogueSimpleRes> results) {
 
+    List<TravelogueSimpleRes> inputResultValue = new ArrayList<>(results);
+
     boolean hasNext = false;
 
     if (results.size() > pageable.getPageSize()) {
       hasNext = true;
-      results.remove(pageable.getPageSize());
+      inputResultValue.remove(pageable.getPageSize());
     }
 
-    return new SliceImpl<>(results, pageable, hasNext);
+    return new SliceImpl<>(inputResultValue, pageable, hasNext);
   }
 
 }
