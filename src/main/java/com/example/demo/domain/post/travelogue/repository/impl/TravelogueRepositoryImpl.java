@@ -37,15 +37,15 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
   public Slice<TravelogueSimpleRes> search(String keyword, Pageable pageable) {
 
     List<TravelogueSimpleRes> travelogueSimpleRes = jpaQueryFactory.select(
-        Projections.constructor(
-            TravelogueSimple.class,
-            travelogue.id,
-            travelogue.title,
-            travelogue.period,
-            travelogue.cost.total,
-            travelogue.country.name,
-            travelogue.thumbnail
-        ))
+            Projections.constructor(
+                TravelogueSimple.class,
+                travelogue.id,
+                travelogue.title,
+                travelogue.period,
+                travelogue.cost.total,
+                travelogue.country.name,
+                travelogue.thumbnail
+            ))
         .from(travelogue)
         .join(subTravelogue)
         .on(subTravelogue.travelogue.id.eq(travelogue.id))
