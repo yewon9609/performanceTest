@@ -1,10 +1,10 @@
 package com.example.demo.domain.post.travelogue.repository.impl;
 
+import static com.example.demo.domain.post.subTravelogue.entity.QAddress.address;
 import static com.example.demo.domain.post.subTravelogue.entity.QSubTravelogue.subTravelogue;
 import static com.example.demo.domain.post.travelogue.entity.QTravelogue.travelogue;
 import static org.springframework.util.StringUtils.hasText;
 
-import com.example.demo.domain.post.subTravelogue.entity.Address;
 import com.example.demo.domain.post.travelogue.dto.TravelogueSimple;
 import com.example.demo.domain.post.travelogue.dto.TravelogueSimpleRes;
 import com.example.demo.domain.post.travelogue.entity.Travelogue;
@@ -20,10 +20,8 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-@Transactional
 public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implements
     TravelogueRepositoryQuerydsl {
 
@@ -59,6 +57,8 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
         .from(travelogue)
         .where(travelogue.id.in(travelogueIds))
         .orderBy(travelogue.id.desc())
+        .limit(pageable.getPageSize() + SPARE_PAGE)
+        .offset(pageable.getOffset())
         .fetch()
         .stream()
         .map(TravelogueSimpleRes::toDto)
@@ -68,58 +68,43 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
   }
 
   private List<Long> getTravelogueIds_contains(String keyword, Pageable pageable) {
-    return jpaQueryFactory
-        .select(travelogue.id)
+
+    return jpaQueryFactory.select(travelogue.id)
         .from(travelogue)
         .leftJoin(subTravelogue)
-        .on(travelogue.subTravelogues.contains(subTravelogue))
+        .on(subTravelogue.travelogue.id.eq(travelogue.id))
+        .leftJoin(subTravelogue.addresses, address)
         .where(
-            travelogue.title.contains(keyword)
+            travelogue.title.startsWith(keyword)
                 .or(countryContains(keyword))
-                .or(subTravelogue.id.in(getSubTravelogueIds(keyword, pageable)))
-        )
-        .groupBy(travelogue.id)
-        .orderBy(travelogue.id.desc())
-        .limit(pageable.getPageSize() + SPARE_PAGE)
-        .offset(pageable.getOffset())
-        .fetch();
-  }
-
-  private List<Long> getSubTravelogueIds(String keyword, Pageable pageable) {
-    return jpaQueryFactory
-        .select(subTravelogue.id)
-        .from(subTravelogue)
-        .where(
-            subTravelogue.title.contains(keyword)
-                .or(contentContains(keyword))
+                .or(subTitleContains(keyword))
                 .or(spotContains(keyword))
         )
-        .groupBy(subTravelogue.id)
-        .orderBy(subTravelogue.id.desc())
         .limit(pageable.getPageSize() + SPARE_PAGE)
         .offset(pageable.getOffset())
         .fetch();
+
   }
 
   private BooleanExpression titleContains(String keyword) {
-    return hasText(keyword) ? travelogue.title.contains(keyword) : null;
+    return hasText(keyword) ? travelogue.title.startsWith(keyword) : null;
   }
 
   private BooleanExpression subTitleContains(String keyword) {
-    return hasText(keyword) ? subTravelogue.title.contains(keyword) : null;
+    return hasText(keyword) ? subTravelogue.title.startsWith(keyword) : null;
   }
 
   private BooleanExpression countryContains(String keyword) {
-    return hasText(keyword) ? travelogue.country.name.contains(keyword) : null;
+    return hasText(keyword) ? travelogue.country.name.startsWith(keyword) : null;
   }
 
   private BooleanExpression contentContains(String keyword) {
-    return hasText(keyword) ? subTravelogue.content.contains(keyword) : null;
+    return hasText(keyword) ? subTravelogue.content.startsWith(keyword) : null;
   }
 
   private BooleanExpression spotContains(String keyword) {
     return hasText(keyword) ?
-        subTravelogue.addresses.contains(new Address(keyword)) : null;
+        address.region.startsWith(keyword) : null;
   }
 
   private Slice<TravelogueSimpleRes> checkLastPage(Pageable pageable,
@@ -136,6 +121,7 @@ public class TravelogueRepositoryImpl extends QuerydslRepositorySupport implemen
 
     return new SliceImpl<>(inputResults, pageable, hasNext);
   }
+
 
 }
 
